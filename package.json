@@ -1,0 +1,77 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "cross-env NODE_ENV=test jest --runInBand",
+    "test:watch": "cross-env NODE_ENV=test jest --watch",
+    "test:ci": "cross-env DOTENV_CONFIG_QUIET=true NODE_ENV=test jest --runInBand --coverage",
+    "test:db:create": "node scripts/testdb-create.js",
+    "test:db:reset": "node scripts/testdb-reset.js",
+    "docs:serve": "node -e \"console.log('Open http://localhost:4000/docs')\" && node src/server.js",
+    "docs:build": "redocly build-docs http://localhost:4000/docs.json -o ./openapi.html",
+    "docs:postman": "curl http://localhost:4000/docs.json -o openapi.json && openapi2postmanv2 -s openapi.json -o postman.json -p",
+    "docs:gen": "node scripts/swagger-autogen.js",
+    "dev:docs": "npm run docs:gen && nodemon src/server.js",
+    "db:docs": "node scripts/db-docs-all.js",
+    "db:docs:test": "node scripts/db-docs-all.js --target=test",
+    "db:docs:nohosted": "node scripts/db-docs-all.js --no-hosted",
+    "db:docs:dump": "node scripts/db-docs-all.js --only=dump",
+    "db:docs:schemaspy": "node scripts/db-docs-all.js --only=schemaspy",
+    "db:docs:dbdocs": "node scripts/db-docs-all.js --only=dbdocs",
+    "db:docs:dbml": "node scripts/db-docs-all.js --only=dbml",
+    "db:migrate": "node scripts/run-migrations.js",
+    "licenses:json": "license-checker-rseidelsohn --production --relativePath --json --out licenses.json",
+    "licenses:summary": "license-checker-rseidelsohn --production --summary",
+    "licenses:fail": "license-checker-rseidelsohn --production --failOn 'GPL;AGPL' --summary",
+    "lint:standard": "standard  --fix"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setupTestDB.js"
+    ],
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 30,
+        "functions": 40,
+        "lines": 60,
+        "statements": 50
+      }
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "dbdocs": "^0.16.1",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.1",
+    "pg": "^8.16.3",
+    "stripe": "^18.4.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "@redocly/cli": "^2.0.7",
+    "cross-env": "^10.0.0",
+    "jest": "^30.0.5",
+    "license-checker-rseidelsohn": "^4.4.2",
+    "nodemon": "^3.1.10",
+    "openapi-to-postmanv2": "^5.0.2",
+    "standard": "^17.1.2",
+    "supertest": "^7.1.4",
+    "swagger-autogen": "^2.23.7"
+  }
+}

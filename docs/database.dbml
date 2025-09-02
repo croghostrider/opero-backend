@@ -1,0 +1,331 @@
+Enum "payment_status" {
+  "created"
+  "in_progress"
+  "approved"
+  "declined"
+  "cancelled"
+  "error"
+}
+
+Enum "product_kind" {
+  "food"
+  "goods"
+}
+
+Enum "self_order_status" {
+  "cart"
+  "placed"
+  "paid"
+  "cancelled"
+}
+
+Table "business_types" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "key" text [unique, not null]
+  "label" text [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+}
+
+Table "tenants" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "name" text [not null]
+  "business_type_id" uuid
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    business_type_id [type: btree, name: "idx_tenants_business_type"]
+  }
+}
+
+Table "users" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "tenant_id" uuid [not null]
+  "email" text [not null]
+  "password_hash" text [not null]
+  "role" text [not null, default: 'user']
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (tenant_id, email) [type: btree, name: "users_tenant_id_email_key"]
+  }
+}
+
+Table "customers" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "tenant_id" uuid [not null]
+  "name" text
+  "email" text
+  "phone" text
+  "company_name" text
+  "tags" jsonb [not null, default: `[]`]
+  "metadata" jsonb [not null, default: `{}`]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (tenant_id, email) [type: btree, name: "customers_tenant_id_email_key"]
+    (tenant_id, email) [type: btree, name: "idx_customers_tenant_email"]
+  }
+}
+
+Table "product_categories" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "tenant_id" uuid [not null]
+  "name" text [not null]
+  "slug" text [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (tenant_id, slug) [type: btree, name: "product_categories_tenant_id_slug_key"]
+  }
+}
+
+Table "products" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "tenant_id" uuid [not null]
+  "name" text [not null]
+  "kind" product_kind [not null]
+  "sku" text
+  "category_id" uuid
+  "price" numeric(12,2)
+  "vat_rate" numeric(4,1) [not null, default: 2.6]
+  "metadata" jsonb [not null, default: `{}`]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (tenant_id, sku) [type: btree, name: "products_tenant_id_sku_key"]
+    (tenant_id, category_id) [type: btree, name: "idx_products_tenant_category"]
+    (tenant_id, created_at) [type: btree, name: "idx_products_tenant_created"]
+    (tenant_id, id) [type: btree, name: "idx_products_tenant_id"]
+    (tenant_id, kind) [type: btree, name: "idx_products_tenant_kind"]
+  }
+}
+
+Table "allergens" {
+  "code" text [pk, not null]
+  "name" text [not null]
+}
+
+Table "ingredients" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "tenant_id" uuid [not null]
+  "name" text [not null]
+  "allergen_codes" "text[]" [not null, default: `ARRAY[]]`]
+  "metadata" jsonb [not null, default: `{}`]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (tenant_id, name) [type: btree, name: "ingredients_tenant_id_name_key"]
+    tenant_id [type: btree, name: "idx_ingredients_tenant"]
+  }
+}
+
+Table "product_ingredients" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "tenant_id" uuid [not null]
+  "product_id" uuid [not null]
+  "ingredient_id" uuid [not null]
+  "quantity" numeric(12,3) [not null]
+  "unit" text [not null]
+  "notes" text
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (product_id, ingredient_id) [type: btree, name: "product_ingredients_product_id_ingredient_id_key"]
+    ingredient_id [type: btree, name: "idx_pingredients_ingredient"]
+    (tenant_id, product_id) [type: btree, name: "idx_pingredients_tenant_prod"]
+  }
+}
+
+Table "menus" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "tenant_id" uuid [not null]
+  "name" text [not null]
+  "slug" text [unique, not null]
+  "is_public" bool [not null, default: true]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (tenant_id, name) [type: btree, name: "menus_tenant_id_name_key"]
+    slug [type: btree, name: "idx_menu_slug"]
+  }
+}
+
+Table "menu_items" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "tenant_id" uuid [not null]
+  "menu_id" uuid [not null]
+  "product_id" uuid [not null]
+  "sort_index" int4 [not null, default: 0]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (menu_id, product_id) [type: btree, name: "menu_items_menu_id_product_id_key"]
+  }
+}
+
+Table "tables" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "tenant_id" uuid [not null]
+  "name" text [not null]
+  "room" text
+  "qr_token" text [unique, not null]
+  "is_active" bool [not null, default: true]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (tenant_id, name) [type: btree, name: "tables_tenant_id_name_key"]
+  }
+}
+
+Table "self_orders" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "tenant_id" uuid [not null]
+  "menu_id" uuid [not null]
+  "table_id" uuid
+  "status" self_order_status [not null, default: 'cart']
+  "currency" text [not null, default: 'CHF']
+  "subtotal" numeric(12,2) [not null, default: 0]
+  "vat_total" numeric(12,2) [not null, default: 0]
+  "grand_total" numeric(12,2) [not null, default: 0]
+  "payment_intent_id" text
+  "receipt_code" text [unique]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    status [type: btree, name: "idx_self_orders_status"]
+  }
+}
+
+Table "self_order_items" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "tenant_id" uuid [not null]
+  "self_order_id" uuid [not null]
+  "product_id" uuid [not null]
+  "qty" numeric(12,2) [not null]
+  "unit_price" numeric(12,2) [not null]
+  "vat_rate" numeric(4,1) [not null]
+  "line_total" numeric(12,2) [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    self_order_id [type: btree, name: "idx_self_order_items_order"]
+  }
+}
+
+Table "orders" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "tenant_id" uuid [not null]
+  "total" numeric(12,2) [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+}
+
+Table "payment_providers" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "tenant_id" uuid [not null]
+  "provider" text [not null]
+  "config" jsonb [not null, default: `{}`]
+  "active" bool [not null, default: false]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (tenant_id, provider) [type: btree, name: "payment_providers_tenant_id_provider_key"]
+    tenant_id [type: btree, name: "idx_payprov_tenant"]
+  }
+}
+
+Table "terminals" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "tenant_id" uuid [not null]
+  "provider" text [not null]
+  "external_id" text
+  "label" text
+  "active" bool [not null, default: true]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    tenant_id [type: btree, name: "idx_terminals_tenant"]
+  }
+}
+
+Table "payments" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "tenant_id" uuid [not null]
+  "provider" text [not null]
+  "terminal_id" uuid
+  "amount" numeric(12,2) [not null]
+  "currency" text [not null, default: 'CHF']
+  "external_id" text
+  "status" payment_status [not null, default: 'in_progress']
+  "receipt_ref" text
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    tenant_id [type: btree, name: "idx_payments_tenant"]
+  }
+}
+
+Table "payment_events" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "payment_id" uuid [not null]
+  "type" text [not null]
+  "payload" jsonb [not null, default: `{}`]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    payment_id [type: btree, name: "idx_pevents_payment"]
+  }
+}
+
+Ref "customers_tenant_id_fkey":"tenants"."id" < "customers"."tenant_id" [delete: cascade]
+
+Ref "ingredients_tenant_id_fkey":"tenants"."id" < "ingredients"."tenant_id" [delete: cascade]
+
+Ref "menu_items_menu_id_fkey":"menus"."id" < "menu_items"."menu_id" [delete: cascade]
+
+Ref "menu_items_product_id_fkey":"products"."id" < "menu_items"."product_id" [delete: restrict]
+
+Ref "menu_items_tenant_id_fkey":"tenants"."id" < "menu_items"."tenant_id" [delete: cascade]
+
+Ref "menus_tenant_id_fkey":"tenants"."id" < "menus"."tenant_id" [delete: cascade]
+
+Ref "orders_tenant_id_fkey":"tenants"."id" < "orders"."tenant_id" [delete: cascade]
+
+Ref "payment_events_payment_id_fkey":"payments"."id" < "payment_events"."payment_id" [delete: cascade]
+
+Ref "payment_providers_tenant_id_fkey":"tenants"."id" < "payment_providers"."tenant_id" [delete: cascade]
+
+Ref "payments_tenant_id_fkey":"tenants"."id" < "payments"."tenant_id" [delete: cascade]
+
+Ref "payments_terminal_id_fkey":"terminals"."id" < "payments"."terminal_id" [delete: set null]
+
+Ref "product_categories_tenant_id_fkey":"tenants"."id" < "product_categories"."tenant_id" [delete: cascade]
+
+Ref "product_ingredients_ingredient_id_fkey":"ingredients"."id" < "product_ingredients"."ingredient_id" [delete: restrict]
+
+Ref "product_ingredients_product_id_fkey":"products"."id" < "product_ingredients"."product_id" [delete: cascade]
+
+Ref "product_ingredients_tenant_id_fkey":"tenants"."id" < "product_ingredients"."tenant_id" [delete: cascade]
+
+Ref "products_category_id_fkey":"product_categories"."id" < "products"."category_id" [delete: set null]
+
+Ref "products_tenant_id_fkey":"tenants"."id" < "products"."tenant_id" [delete: cascade]
+
+Ref "self_order_items_product_id_fkey":"products"."id" < "self_order_items"."product_id" [delete: restrict]
+
+Ref "self_order_items_self_order_id_fkey":"self_orders"."id" < "self_order_items"."self_order_id" [delete: cascade]
+
+Ref "self_order_items_tenant_id_fkey":"tenants"."id" < "self_order_items"."tenant_id" [delete: cascade]
+
+Ref "self_orders_menu_id_fkey":"menus"."id" < "self_orders"."menu_id" [delete: restrict]
+
+Ref "self_orders_table_id_fkey":"tables"."id" < "self_orders"."table_id" [delete: set null]
+
+Ref "self_orders_tenant_id_fkey":"tenants"."id" < "self_orders"."tenant_id" [delete: cascade]
+
+Ref "tables_tenant_id_fkey":"tenants"."id" < "tables"."tenant_id" [delete: cascade]
+
+Ref "tenants_business_type_id_fkey":"business_types"."id" < "tenants"."business_type_id" [delete: set null]
+
+Ref "terminals_tenant_id_fkey":"tenants"."id" < "terminals"."tenant_id" [delete: cascade]
+
+Ref "users_tenant_id_fkey":"tenants"."id" < "users"."tenant_id" [delete: cascade]
